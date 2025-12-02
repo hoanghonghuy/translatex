@@ -20,6 +20,9 @@ config.yaml
 # Hypothesis test cache
 .hypothesis/
 
+# Translation cache
+.translatex_cache.json
+
 # Kiro specs (development only)
 .kiro/
 
