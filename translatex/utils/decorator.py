@@ -32,7 +32,7 @@ def log_errors(func):
             return func(*args, **kwargs)
         except Exception as e:
             logger = logging.getLogger(func.__name__)
-            logger.error(f"❌ {func.__name__} failed: {e}")
+            logger.error(f"{func.__name__} failed: {e}")
             raise
     return wrapper
 
@@ -49,9 +49,9 @@ def retry(max_attempts=3, delay=1):
                     return func(*args, **kwargs)
                 except Exception as e:
                     if attempt == max_attempts:
-                        logger.error(f"❌ {func.__name__} failed after {max_attempts} attempts")
+                        logger.error(f"{func.__name__} failed after {max_attempts} attempts")
                         raise
-                    logger.warning(f"⚠️  Attempt {attempt}/{max_attempts} failed: {e}. Retrying in {delay}s...")
+                    logger.warning(f"Attempt {attempt}/{max_attempts} failed: {e}. Retrying in {delay}s...")
                     time.sleep(delay)
         return wrapper
     return decorator

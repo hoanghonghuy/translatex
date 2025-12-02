@@ -129,12 +129,12 @@ class Extractor:
                                     ))
                                     v_idx += 1
                     except Exception as e:
-                        self.logger.warning(f"   ⚠️  Error processing {chart_file}: {e}")
+                        self.logger.warning(f"Error processing {chart_file}: {e}")
                     finally:
                         if progress_callback:
                             progress_callback()
         except Exception as e:
-            self.logger.warning(f"   ⚠️  Error accessing charts: {e}")
+            self.logger.warning(f"Error accessing charts: {e}")
     
     # @progress_tracker(item_name='SmartArt files', use_tqdm=True)
     def _extract_smartart_segments(self, diagram_files: list[str], progress_callback=None):
@@ -156,12 +156,12 @@ class Extractor:
                                     file_path=diagram_file
                                 ))
                     except Exception as e:
-                        self.logger.warning(f"   ⚠️  Error processing {diagram_file}: {e}")
+                        self.logger.warning(f"Error processing {diagram_file}: {e}")
                     finally:
                         if progress_callback:
                             progress_callback()
         except Exception as e:
-            self.logger.warning(f"   ⚠️  Error accessing SmartArt: {e}")
+            self.logger.warning(f"Error accessing SmartArt: {e}")
     
     @timer
     @log_errors
@@ -192,14 +192,14 @@ class Extractor:
                 if chart_files:
                     self._extract_chart_segments(chart_files)
                 else:
-                    self.logger.info("📈 No chart files found")
+                    self.logger.info("No chart files found")
                 
                 if diagram_files:
                     self._extract_smartart_segments(diagram_files)
                 else:
-                    self.logger.info("🕸️ No SmartArt files found")
+                    self.logger.info("No SmartArt files found")
         except Exception as e:
-            self.logger.warning(f"⚠️  Error accessing ZIP content: {e}")
+            self.logger.warning(f"Error accessing ZIP content: {e}")
         
         # Lưu checkpoint
         with open(self.checkpoint_file, "w", encoding="utf-8") as f:

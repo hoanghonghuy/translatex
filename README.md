@@ -1,26 +1,22 @@
-# TranslateX 🌐
+# TranslateX
 
-> **AI-powered DOCX Translation with Format Preservation**
+AI-powered DOCX translation with format preservation. Supports OpenAI, Google Gemini, Groq, and OpenRouter.
 
-TranslateX is a powerful tool for translating Microsoft Word documents (.docx) using AI (OpenAI, Gemini, Groq, OpenRouter) while preserving the original formatting, structure, and layout completely.
+## Features
 
-## 🚀 Features
+- Multi-provider support: OpenAI, Gemini, Groq, OpenRouter
+- Preserves all formatting, styles, tables, and charts
+- Free translation with Gemini or Groq
+- Smart rate limiting per provider
+- Async parallel processing
 
-- ✅ **Multi-Provider Support**: OpenAI, Google Gemini, Groq, OpenRouter
-- ✅ **Format Preservation**: Keep all formatting, styles, tables, charts
-- ✅ **Free Models**: Use Gemini or Groq for free translation
-- ✅ **Smart Rate Limiting**: Auto-adjust for each provider's limits
-- ✅ **Async Processing**: Fast parallel translation
-
-## 📦 Installation
-
-### From pip
+## Installation
 
 ```bash
 pip install translatex
 ```
 
-### From source
+Or from source:
 
 ```bash
 git clone https://github.com/hoanghonghuy/translatex.git
@@ -28,9 +24,9 @@ cd translatex
 pip install -e .
 ```
 
-## 🔑 Quick Start
+## Quick Start
 
-### Using Gemini (FREE - Recommended!)
+### Using Gemini (Free)
 
 ```python
 from translatex import DocxTranslator
@@ -38,20 +34,19 @@ from translatex import DocxTranslator
 translator = DocxTranslator(
     input_file="document.docx",
     output_dir="./output",
-    gemini_api_key="your-gemini-api-key",
+    gemini_api_key="your-api-key",
     provider="gemini",
-    model="gemini-2.0-flash",  # FREE!
+    model="gemini-2.0-flash",
     source_lang="English",
     target_lang="Vietnamese"
 )
 
 translator.translate()
-print("Done!")
 ```
 
-> 🚀 Get free Gemini API key at: https://aistudio.google.com/apikey
+Get free Gemini API key: https://aistudio.google.com/apikey
 
-### Using Groq (FREE & Fast!)
+### Using Groq (Free)
 
 ```python
 from translatex import DocxTranslator
@@ -59,9 +54,9 @@ from translatex import DocxTranslator
 translator = DocxTranslator(
     input_file="document.docx",
     output_dir="./output",
-    groq_api_key="your-groq-api-key",
+    groq_api_key="your-api-key",
     provider="groq",
-    model="llama-3.3-70b-versatile",  # FREE!
+    model="llama-3.3-70b-versatile",
     source_lang="English",
     target_lang="Vietnamese"
 )
@@ -69,7 +64,7 @@ translator = DocxTranslator(
 translator.translate()
 ```
 
-> 🚀 Get free Groq API key at: https://console.groq.com/keys
+Get free Groq API key: https://console.groq.com/keys
 
 ### Using OpenAI
 
@@ -79,7 +74,7 @@ from translatex import DocxTranslator
 translator = DocxTranslator(
     input_file="document.docx",
     output_dir="./output",
-    openai_api_key="sk-your-openai-key",
+    openai_api_key="sk-your-key",
     provider="openai",
     model="gpt-4o-mini",
     source_lang="English",
@@ -89,66 +84,57 @@ translator = DocxTranslator(
 translator.translate()
 ```
 
-## ⚙️ Configuration
+## Configuration
 
 Create `config.yaml`:
 
 ```yaml
-# Provider: openai, gemini, groq, openrouter
 provider: "gemini"
-
-# API Keys
 gemini_api_key: "your-key"
-openai_api_key: ""
-groq_api_key: ""
-openrouter_api_key: ""
-
-# Model
 model: "gemini-2.0-flash"
-
-# Translation
 source_lang: "English"
 target_lang: "Vietnamese"
-
-# Performance
 max_concurrent: 5
 max_chunk_size: 5000
 ```
 
-Run:
+Run via CLI:
 
 ```bash
 python main.py document.docx --output_dir output
 ```
 
-## 🆓 Free Models
+## Supported Models
 
-### Gemini (Recommended)
+### Gemini (Free)
 
-| Model | Rate Limit | Best For |
-|-------|------------|----------|
-| `gemini-2.0-flash` | 15 RPM | ⭐ Best balance |
-| `gemini-2.5-flash` | 10 RPM | Higher quality |
-| `gemini-2.0-flash-lite` | 30 RPM | Fastest |
+| Model | Rate Limit | Notes |
+|-------|------------|-------|
+| gemini-2.0-flash | 15 RPM | Recommended |
+| gemini-2.5-flash | 10 RPM | Higher quality |
+| gemini-2.0-flash-lite | 30 RPM | Fastest |
 
-### Groq
+### Groq (Free)
 
-| Model | Description |
-|-------|-------------|
-| `llama-3.3-70b-versatile` | Best quality |
-| `gemma2-9b-it` | Fast |
-| `mixtral-8x7b-32768` | Good for long docs |
+| Model | Notes |
+|-------|-------|
+| llama-3.3-70b-versatile | Best quality |
+| gemma2-9b-it | Fast |
+| mixtral-8x7b-32768 | Long context |
 
-## 📄 License
+### OpenAI (Paid)
+
+| Model | Notes |
+|-------|-------|
+| gpt-4o-mini | Cost effective |
+| gpt-4o | Best quality |
+
+## License
 
 MIT License
 
-## 👨‍💻 Author
+## Author
 
-**Hoang Hong Huy**
-- 📧 Email: huy.hoanghong.work@gmail.com
-- 🐙 GitHub: [@hoanghonghuy](https://github.com/hoanghonghuy)
-
----
-
-**TranslateX** - Smart document translation with AI! 🌐✨
+Hoang Hong Huy  
+Email: huy.hoanghong.work@gmail.com  
+GitHub: https://github.com/hoanghonghuy

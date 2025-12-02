@@ -98,7 +98,7 @@ class Injector:
                     count += 1
                     tree.write(file_path, encoding='UTF-8', xml_declaration=True, pretty_print=False)
             except Exception as e:
-                self.logger.warning(f"   ⚠️  Error injecting segment: {e}")
+                self.logger.warning(f"Error injecting segment: {e}")
             finally:
                 if progress_callback:
                     progress_callback()

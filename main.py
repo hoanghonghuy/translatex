@@ -14,7 +14,7 @@ def load_config(config_path: str) -> dict:
     try:
         with open(config_path, 'r', encoding='utf-8') as f:
             config = yaml.safe_load(f)
-        logger.info(f"✓ Loaded config from {config_path}")
+        logger.info(f"Loaded config from {config_path}")
         return config
     except FileNotFoundError:
         logger.error(f"✗ Config file not found: {config_path}")
@@ -65,7 +65,7 @@ def main():
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
-    print("⚙️ Starting DOCX translation process...\n")
+    print("Starting DOCX translation...\n")
 
     spinner = Spinner("Processing DOCX translation")
     spinner.start()
@@ -86,10 +86,10 @@ def main():
         )
         docx_translator.translate()
         spinner.stop()
-        print(f"✅ Translation completed successfully!\n→ Output: {docx_translator.get_output_path()}")
+        print(f"Translation completed!\nOutput: {docx_translator.get_output_path()}")
     except Exception as e:
         spinner.stop()
-        print(f"❌ Translation failed: {e}")
+        print(f"Translation failed: {e}")
         sys.exit(1)
 
 if __name__ == "__main__":

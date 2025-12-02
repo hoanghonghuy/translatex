@@ -118,7 +118,7 @@ class Translator:
                     if self._validate_markers(text, translated):
                         return translated
                     else:
-                        self.logger.warning(f"   ⚠️  Markers validation failed, attempt {attempt + 1}/{max_retries}")
+                        self.logger.warning(f"Markers validation failed, attempt {attempt + 1}/{max_retries}")
                         if attempt < max_retries - 1:
                             await asyncio.sleep(base_delay + self.request_delay)
                             continue
@@ -131,11 +131,11 @@ class Translator:
                     if "429" in error_str or "rate" in error_str.lower() or "resource" in error_str.lower():
                         # Use longer delay for rate limits
                         delay = max(base_delay * (2 ** attempt), self.request_delay * 2)
-                        self.logger.warning(f"   ⏳ Rate limit hit, waiting {delay}s before retry {attempt + 1}/{max_retries}")
+                        self.logger.warning(f"Rate limit hit, waiting {delay}s before retry {attempt + 1}/{max_retries}")
                         await asyncio.sleep(delay)
                         continue
                     
-                    self.logger.error(f"   ⚠️  Translation error: {e}")
+                    self.logger.error(f"Translation error: {e}")
                     if attempt < max_retries - 1:
                         await asyncio.sleep(base_delay)
                         continue
@@ -232,7 +232,7 @@ class Translator:
                 run['translated_text'] = translated_run_text
             else:
                 # Nếu không tìm thấy marker, giữ nguyên text gốc
-                self.logger.warning(f"   ⚠️  Marker <R{marker_idx}> not found in {prefix}-{idx}, keeping original text")
+                self.logger.warning(f"Marker <R{marker_idx}> not found in {prefix}-{idx}, keeping original text")
                 run['translated_text'] = run['text']
                 success = False
         
@@ -285,7 +285,7 @@ class Translator:
                 # Cập nhật full_text từ translated_text
                 segment['full_text'] = "".join(run.get('translated_text', run['text']) for run in segment['runs_list'])
             else:
-                self.logger.warning(f"   ⚠️  Segment marker not found for seg-{seg_idx}, keeping original text")
+                self.logger.warning(f"Segment marker not found for seg-{seg_idx}, keeping original text")
                 # Giữ nguyên text gốc
                 for run in segment['runs_list']:
                     run['translated_text'] = run['text']
@@ -299,17 +299,17 @@ class Translator:
     async def _translate_text_segments(self, text_segments: list[TextSegment], progress_callback=None):
         """Dịch tất cả text segments (theo chunks) với async"""
         chunks = self._chunk_text_segments(text_segments)
-        self.logger.info(f"📦 Split {len(text_segments)} text segments into {len(chunks)} chunks")
+        self.logger.info(f"Split {len(text_segments)} text segments into {len(chunks)} chunks")
         
         if self.sequential_mode:
             # Sequential mode: process one chunk at a time to avoid rate limits
-            self.logger.info(f"🔄 Translating {len(chunks)} text chunks sequentially...")
+            self.logger.info(f"Translating {len(chunks)} text chunks sequentially...")
             for chunk in chunks:
                 await self._translate_text_chunk(chunk, progress_callback)
         else:
             # Parallel mode: process all chunks concurrently
             tasks = [self._translate_text_chunk(chunk, progress_callback) for chunk in chunks]
-            self.logger.info(f"🚀 Translating {len(chunks)} text chunks with max {self.max_concurrent} concurrent requests...")
+            self.logger.info(f"Translating {len(chunks)} text chunks...")
             await asyncio.gather(*tasks)
     
     def _group_table_cells_by_table(self, table_cell_segments: list[TableCellSegment]) -> dict[int, list[TableCellSegment]]:
@@ -356,7 +356,7 @@ class Translator:
                         cell_id
                     )
                 else:
-                    self.logger.warning(f"   ⚠️  Cell marker not found for {cell_id}, keeping original text")
+                    self.logger.warning(f"Cell marker not found for {cell_id}, keeping original text")
                     for run in cell['runs_list']:
                         run['translated_text'] = run['text']
         
@@ -367,15 +367,15 @@ class Translator:
     async def _translate_table_cell_segments(self, table_cell_segments: list[TableCellSegment], progress_callback=None):
         """Dịch tất cả table cell segments, nhóm theo table_idx"""
         grouped_tables = self._group_table_cells_by_table(table_cell_segments)
-        self.logger.info(f"📊 Grouped {len(table_cell_segments)} cells into {len(grouped_tables)} tables")
+        self.logger.info(f"Grouped {len(table_cell_segments)} cells into {len(grouped_tables)} tables")
         
         if self.sequential_mode:
-            self.logger.info(f"🔄 Translating {len(grouped_tables)} tables sequentially...")
+            self.logger.info(f"Translating {len(grouped_tables)} tables sequentially...")
             for table_idx, cells in grouped_tables.items():
                 await self._translate_table(table_idx, cells, progress_callback)
         else:
             tasks = [self._translate_table(table_idx, cells, progress_callback) for table_idx, cells in grouped_tables.items()]
-            self.logger.info(f"🚀 Translating {len(tasks)} tables with max {self.max_concurrent} concurrent requests...")
+            self.logger.info(f"Translating {len(tasks)} tables...")
             await asyncio.gather(*tasks)
     
     def _group_charts_by_idx(self, chart_segments: list[ChartSegment]) -> dict[int, list[ChartSegment]]:
@@ -409,7 +409,7 @@ class Translator:
                     elem['translated_text'] = match.group(1)
                 else:
                     if elem['text'].strip():
-                        self.logger.warning(f"   ⚠️  Marker not found for chart-{elem_id}, keeping original text")
+                        self.logger.warning(f"Marker not found for chart-{elem_id}, keeping original text")
                     elem['translated_text'] = elem['text']
         
         # Update progress if callback provided
@@ -419,15 +419,15 @@ class Translator:
     async def _translate_chart_segments(self, chart_segments: list[ChartSegment], progress_callback=None):
         """Dịch tất cả chart segments, nhóm theo chart_idx"""
         grouped_charts = self._group_charts_by_idx(chart_segments)
-        self.logger.info(f"📈 Grouped {len(chart_segments)} elements into {len(grouped_charts)} charts")
+        self.logger.info(f"Grouped {len(chart_segments)} elements into {len(grouped_charts)} charts")
         
         if self.sequential_mode:
-            self.logger.info(f"🔄 Translating {len(grouped_charts)} charts sequentially...")
+            self.logger.info(f"Translating {len(grouped_charts)} charts sequentially...")
             for chart_idx, elements in grouped_charts.items():
                 await self._translate_chart(chart_idx, elements, progress_callback)
         else:
             tasks = [self._translate_chart(chart_idx, elements, progress_callback) for chart_idx, elements in grouped_charts.items()]
-            self.logger.info(f"🚀 Translating {len(tasks)} charts with max {self.max_concurrent} concurrent requests...")
+            self.logger.info(f"Translating {len(tasks)} charts...")
             await asyncio.gather(*tasks)
     
     def _group_smartarts_by_idx(self, smartart_segments: list[SmartArtSegment]) -> dict[int, list[SmartArtSegment]]:
@@ -461,7 +461,7 @@ class Translator:
                     elem['translated_text'] = match.group(1)
                 else:
                     if elem['text'].strip():
-                        self.logger.warning(f"   ⚠️  Marker not found for smart-{elem_id}, keeping original text")
+                        self.logger.warning(f"Marker not found for smart-{elem_id}, keeping original text")
                     elem['translated_text'] = elem['text']
         
         # Update progress if callback provided
@@ -471,15 +471,15 @@ class Translator:
     async def _translate_smartart_segments(self, smartart_segments: list[SmartArtSegment], progress_callback=None):
         """Dịch tất cả SmartArt segments, nhóm theo smartart_idx"""
         grouped_smartarts = self._group_smartarts_by_idx(smartart_segments)
-        self.logger.info(f"🎨 Grouped {len(smartart_segments)} elements into {len(grouped_smartarts)} SmartArts")
+        self.logger.info(f"Grouped {len(smartart_segments)} elements into {len(grouped_smartarts)} SmartArts")
         
         if self.sequential_mode:
-            self.logger.info(f"🔄 Translating {len(grouped_smartarts)} SmartArts sequentially...")
+            self.logger.info(f"Translating {len(grouped_smartarts)} SmartArts sequentially...")
             for smartart_idx, elements in grouped_smartarts.items():
                 await self._translate_smartart(smartart_idx, elements, progress_callback)
         else:
             tasks = [self._translate_smartart(smartart_idx, elements, progress_callback) for smartart_idx, elements in grouped_smartarts.items()]
-            self.logger.info(f"🚀 Translating {len(tasks)} SmartArts with max {self.max_concurrent} concurrent requests...")
+            self.logger.info(f"Translating {len(tasks)} SmartArts...")
             await asyncio.gather(*tasks)
 
     async def _translate_all(self):
@@ -528,14 +528,14 @@ class Translator:
             
             # CHẠY TẤT CẢ SONG SONG
             if all_tasks:
-                self.logger.info(f"🔥 Starting parallel translation for {total_tasks} tasks...")
+                self.logger.info(f"Starting parallel translation for {total_tasks} tasks...")
                 await asyncio.gather(*all_tasks)
 
         # Lưu lại checkpoint đã dịch
         with open(self.checkpoint_file, "w", encoding="utf-8") as f:
             json.dump(checkpoint_data, f, ensure_ascii=False, indent=2)
         
-        self.logger.info(f"✅ Translation completed and saved to {self.checkpoint_file}")
+        self.logger.info(f"Translation completed and saved to {self.checkpoint_file}")
         self.logger.info(f"Total translated:")
         self.logger.info(f"  - Text segments: {len(checkpoint_data['text_segments'])}")
         self.logger.info(f"  - Table cell segments: {len(checkpoint_data['table_cell_segments'])}")

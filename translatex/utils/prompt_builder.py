@@ -55,7 +55,7 @@ class PromptBuilder:
             f"- Variable names, function names, class names\n"
             f"- Brand names, product names, proper nouns\n"
             f"- Text inside backticks (`code`)\n\n"
-            f"⚠️ CRITICAL - MARKER PRESERVATION RULES ⚠️\n"
+            f"CRITICAL - MARKER PRESERVATION RULES:\n"
             f"The text contains XML-like markers that MUST be preserved:\n"
             f"- Opening tags: <R0>, <R1>, <SEG0>, <CELL0-0-0-0>, etc.\n"
             f"- Closing tags: </R0>, </R1>, </SEG0>, </CELL0-0-0-0>, etc.\n\n"
@@ -70,8 +70,8 @@ class PromptBuilder:
             f"Input:  <R0>Hello </R0><R1>world</R1>\n"
             f"Output: <R0>Xin chào </R0><R1>thế giới</R1>\n\n"
             f"WRONG OUTPUT (missing markers):\n"
-            f"❌ Xin chào thế giới\n"
-            f"❌ <R0>Xin chào thế giới</R0>"
+            f"[X] Xin chào thế giới\n"
+            f"[X] <R0>Xin chào thế giới</R0>"
         )
         
         return prompt

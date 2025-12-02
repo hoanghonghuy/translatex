@@ -22,7 +22,7 @@ class OpenAIClientManager:
         # Validate và tạo client qua factory
         self.client = LLMClientFactory.create_client(provider, api_key)
         
-        logger.info(f"✓ Initialized {provider} client")
+        logger.info(f"Initialized {provider} client")
     
     def get_client(self) -> AsyncOpenAI:
         """Trả về LLM client"""

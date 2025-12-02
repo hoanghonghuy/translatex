@@ -1,5 +1,5 @@
 """
-TranslateX 🌐
+TranslateX
 AI-powered DOCX translation with format preservation.
 Supports OpenAI, Gemini, Groq, and OpenRouter.
 
