@@ -7,6 +7,7 @@ import yaml
 
 from translatex import DocxTranslator
 from translatex.batch import BatchProcessor
+from translatex.docs.translator import DocsTranslator
 from translatex.utils.spinner import Spinner
 from translatex.utils.file_logger import setup_logger, get_logger
 from translatex.utils.config import TranslateXConfig
@@ -148,24 +149,66 @@ def translate_batch(config: dict, input_dir: str, output_dir: str):
                 print(f"  - {os.path.basename(path)}: {result['error']}")
 
 
+def translate_docs(config: dict, source_dir: str, output_dir: str, force: bool = False):
+    """Translate documentation directory (Markdown/MDX files)"""
+    logger = get_logger()
+    
+    print(f"Starting docs translation: {source_dir} -> {output_dir}\n")
+    
+    # Get API key
+    provider = config.get("provider", "openai")
+    key_map = {
+        "openai": "openai_api_key",
+        "openrouter": "openrouter_api_key",
+        "groq": "groq_api_key",
+        "gemini": "gemini_api_key",
+    }
+    api_key = config.get(key_map.get(provider, "openai_api_key"), "")
+    
+    try:
+        translator = DocsTranslator(
+            api_key=api_key,
+            provider=provider,
+            model=config.get("model", "gpt-4o-mini"),
+            source_lang=config.get("source_lang", "English"),
+            target_lang=config.get("target_lang", "Vietnamese"),
+            cache_enabled=config.get("cache_enabled", True),
+            glossary_file=config.get("glossary_file"),
+        )
+        
+        stats = translator.translate_directory(source_dir, output_dir, force=force)
+        
+        print(f"\nDocs translation completed!")
+        print(f"  Translated: {stats['files_translated']}")
+        print(f"  Cached: {stats['files_cached']}")
+        print(f"  Failed: {stats['files_failed']}")
+        
+    except Exception as e:
+        print(f"Docs translation failed: {e}")
+        logger.error(f"Docs translation failed: {e}")
+        sys.exit(1)
+
+
 def main():
     config = load_config("config.yaml")
     
     parser = argparse.ArgumentParser(
-        description="TranslateX - Translate DOCX files with AI",
+        description="TranslateX - Translate DOCX and Documentation files with AI",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python main.py document.docx                    # Translate single file
+  python main.py document.docx                    # Translate single DOCX file
   python main.py ./docs/                          # Translate all DOCX in directory
-  python main.py document.docx --output_dir out  # Custom output directory
+  python main.py --docs ./nextjs-docs/ -o ./vi/  # Translate Markdown/MDX docs
+  python main.py --docs ./docs/ --force          # Force retranslate all docs
         """
     )
-    parser.add_argument("input", type=str, help="Input DOCX file or directory")
-    parser.add_argument("--output_dir", type=str, help="Output directory", default="output")
+    parser.add_argument("input", type=str, nargs="?", help="Input DOCX file or directory")
+    parser.add_argument("--output_dir", "-o", type=str, help="Output directory", default="output")
+    parser.add_argument("--docs", type=str, help="Translate documentation directory (Markdown/MDX)")
+    parser.add_argument("--force", action="store_true", help="Force retranslation (ignore cache)")
     args = parser.parse_args()
     
-    input_path = args.input
     output_dir = args.output_dir
     
     # Validate provider API key
@@ -191,6 +234,20 @@ Examples:
         log_to_file=config.get("log_to_file", True),
         output_dir=output_dir
     )
+    
+    # Handle docs translation mode
+    if args.docs:
+        if not os.path.isdir(args.docs):
+            print(f"Docs directory not found: {args.docs}")
+            sys.exit(1)
+        translate_docs(config, args.docs, output_dir, force=args.force)
+        return
+    
+    # Handle DOCX translation
+    input_path = args.input
+    if not input_path:
+        parser.print_help()
+        sys.exit(1)
     
     # Check if input is file or directory
     if os.path.isdir(input_path):

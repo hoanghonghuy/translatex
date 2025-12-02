@@ -158,6 +158,25 @@ terms:
 | gpt-4o-mini | Cost effective |
 | gpt-4o | Best quality |
 
+## Dev Docs Translation
+
+Translate Markdown (.md) and MDX (.mdx) documentation:
+
+```bash
+# Translate a docs directory
+python main.py --docs ./nextjs-docs/ -o ./nextjs-docs-vi/
+
+# Force retranslate all files
+python main.py --docs ./docs/ --force
+```
+
+Features:
+- Preserves code blocks, inline code, links, images
+- Preserves JSX components and imports in MDX
+- Preserves frontmatter structure
+- Incremental translation (only changed files)
+- Mirrors directory structure
+
 ## License
 
 MIT License
