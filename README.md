@@ -92,9 +92,3 @@ translator.translate()
 ## License
 
 MIT License
-
-## Author
-
-Hoang Hong Huy  
-Email: huy.hoanghong.work@gmail.com  
-GitHub: https://github.com/hoanghonghuy
