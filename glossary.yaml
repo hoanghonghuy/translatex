@@ -1,0 +1,59 @@
+# TranslateX Custom Glossary
+# Define custom translations for technical terms
+# Format: "source term": "target translation"
+
+terms:
+  # Keep these terms unchanged (same in source and target)
+  "API": "API"
+  "SDK": "SDK"
+  "UI": "UI"
+  "UX": "UX"
+  "URL": "URL"
+  "HTTP": "HTTP"
+  "HTTPS": "HTTPS"
+  "JSON": "JSON"
+  "XML": "XML"
+  "HTML": "HTML"
+  "CSS": "CSS"
+  
+  # Programming languages (keep as-is)
+  "JavaScript": "JavaScript"
+  "TypeScript": "TypeScript"
+  "Python": "Python"
+  "Java": "Java"
+  "C++": "C++"
+  "C#": "C#"
+  "Go": "Go"
+  "Rust": "Rust"
+  
+  # Frameworks and tools (keep as-is)
+  "React": "React"
+  "Vue": "Vue"
+  "Angular": "Angular"
+  "Next.js": "Next.js"
+  "Node.js": "Node.js"
+  "npm": "npm"
+  "yarn": "yarn"
+  "Git": "Git"
+  "GitHub": "GitHub"
+  "Docker": "Docker"
+  "Kubernetes": "Kubernetes"
+  
+  # Cloud providers (keep as-is)
+  "AWS": "AWS"
+  "Azure": "Azure"
+  "GCP": "GCP"
+  
+  # Custom translations (Vietnamese examples)
+  # Uncomment and modify as needed:
+  # "frontend": "giao diện người dùng"
+  # "backend": "máy chủ"
+  # "database": "cơ sở dữ liệu"
+  # "server": "máy chủ"
+  # "client": "máy khách"
+  # "user": "người dùng"
+  # "admin": "quản trị viên"
+  # "authentication": "xác thực"
+  # "authorization": "phân quyền"
+  # "deployment": "triển khai"
+  # "configuration": "cấu hình"

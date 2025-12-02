@@ -104,7 +104,7 @@ class TestDefaultProviderFallback:
                         # No API key provided
                     )
                 
-                assert "OpenAI API key" in str(exc_info.value)
+                assert "openai" in str(exc_info.value).lower() and "api key" in str(exc_info.value).lower()
         finally:
             if os.path.exists(temp_file):
                 os.remove(temp_file)
@@ -127,7 +127,7 @@ class TestDefaultProviderFallback:
                         # No API key provided
                     )
                 
-                assert "OpenRouter API key" in str(exc_info.value)
+                assert "openrouter" in str(exc_info.value).lower() and "api key" in str(exc_info.value).lower()
         finally:
             if os.path.exists(temp_file):
                 os.remove(temp_file)

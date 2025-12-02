@@ -1,5 +1,5 @@
 class PromptBuilder:
-    """Xây dựng prompts cho LLM API với hỗ trợ glossary"""
+    """Xây dựng prompts cho LLM API với hỗ trợ glossary và context"""
     
     # Default technical terms to keep unchanged
     DEFAULT_KEEP_TERMS = [
@@ -11,7 +11,7 @@ class PromptBuilder:
         "CI/CD", "DevOps", "Agile", "Scrum", "Sprint",
     ]
     
-    def __init__(self, source_lang: str, target_lang: str, glossary: dict = None, keep_terms: list = None):
+    def __init__(self, source_lang: str, target_lang: str, glossary: dict = None, keep_terms: list = None, context_window: "ContextWindow" = None):
         """
         Khởi tạo PromptBuilder
         
@@ -20,11 +20,13 @@ class PromptBuilder:
             target_lang: Ngôn ngữ đích
             glossary: Dict mapping source terms to target translations
             keep_terms: List of terms to keep unchanged (not translate)
+            context_window: ContextWindow instance for coherent translations
         """
         self.source_lang = source_lang
         self.target_lang = target_lang
         self.glossary = glossary or {}
         self.keep_terms = keep_terms or self.DEFAULT_KEEP_TERMS
+        self.context_window = context_window
     
     def build_system_prompt(self) -> str:
         """Xây dựng system prompt cho translation"""
@@ -77,8 +79,18 @@ class PromptBuilder:
         return prompt
     
     def build_user_prompt(self, text: str) -> str:
-        """Xây dựng user prompt"""
-        return f"Translate the following text:\n\n{text}"
+        """Xây dựng user prompt với context nếu có"""
+        prompt_parts = []
+        
+        # Add context if available
+        if self.context_window:
+            context_text = self.context_window.format_for_prompt()
+            if context_text:
+                prompt_parts.append(context_text)
+        
+        prompt_parts.append(f"Translate the following text:\n\n{text}")
+        
+        return "\n".join(prompt_parts)
     
     def build_messages(self, text: str) -> list[dict]:
         """Xây dựng messages array cho LLM API"""
@@ -86,3 +98,8 @@ class PromptBuilder:
             {"role": "system", "content": self.build_system_prompt()},
             {"role": "user", "content": self.build_user_prompt(text)}
         ]
+    
+    def add_to_context(self, translated_text: str):
+        """Add translated text to context window for next translation"""
+        if self.context_window:
+            self.context_window.add(translated_text)

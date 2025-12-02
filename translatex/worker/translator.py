@@ -17,7 +17,7 @@ logging.basicConfig(level=logging.WARNING)
 class Translator:
     """Dịch nội dung từ checkpoint file sử dụng LLM API với async (OpenAI hoặc OpenRouter)"""
     
-    def __init__(self, checkpoint_file: str, api_key: str, provider: str = "openai", model: str = "gpt-4o-mini", source_lang: str = "English", target_lang: str = "Vietnamese", max_chunk_size: int = 5000, max_concurrent: int = 100):
+    def __init__(self, checkpoint_file: str, api_key: str, provider: str = "openai", model: str = "gpt-4o-mini", source_lang: str = "English", target_lang: str = "Vietnamese", max_chunk_size: int = 5000, max_concurrent: int = 100, cache=None, context_window=None, glossary: dict = None):
         """
         Khởi tạo Translator
         
@@ -30,9 +30,21 @@ class Translator:
             target_lang: Ngôn ngữ đích
             max_chunk_size: Kích thước chunk tối đa
             max_concurrent: Số request đồng thời tối đa
+            cache: TranslationCache instance (optional)
+            context_window: ContextWindow instance (optional)
+            glossary: Dict of glossary terms (optional)
         """
         self.checkpoint_file = checkpoint_file
         self.provider = provider
+        
+        # Advanced features
+        self.cache = cache
+        self.context_window = context_window
+        self.glossary = glossary or {}
+        
+        # Stats tracking
+        self.cache_hits = 0
+        self.api_calls = 0
         
         # Khởi tạo LLM client manager
         self.client_manager = OpenAIClientManager(api_key=api_key, provider=provider)
@@ -69,8 +81,13 @@ class Translator:
         else:
             self.max_chunk_size = max_chunk_size
         
-        # Khởi tạo prompt builder
-        self.prompt_builder = PromptBuilder(self.source_lang, self.target_lang)
+        # Khởi tạo prompt builder với glossary và context
+        self.prompt_builder = PromptBuilder(
+            self.source_lang, 
+            self.target_lang,
+            glossary=self.glossary,
+            context_window=self.context_window
+        )
         
         self.logger = logging.getLogger(self.__class__.__name__)
         self.semaphore = asyncio.Semaphore(self.max_concurrent)
@@ -96,6 +113,14 @@ class Translator:
     
     async def _translate_text(self, text: str, context: str = "general", max_retries: int = 3) -> str:
         """Dịch một đoạn text với retry mechanism và exponential backoff"""
+        # Check cache first
+        if self.cache:
+            cached = self.cache.get(text)
+            if cached:
+                self.cache_hits += 1
+                self.logger.debug(f"Cache hit for text (length={len(text)})")
+                return cached
+        
         async with self.semaphore:
             base_delay = 2  # Base delay in seconds
             
@@ -113,15 +138,25 @@ class Translator:
                     )
                     
                     translated = response.choices[0].message.content.strip()
+                    self.api_calls += 1
                     
                     # Validate markers are preserved
                     if self._validate_markers(text, translated):
+                        # Store in cache
+                        if self.cache:
+                            self.cache.set(text, translated)
+                        # Add to context window
+                        if self.context_window:
+                            self.prompt_builder.add_to_context(translated)
                         return translated
                     else:
                         self.logger.warning(f"Markers validation failed, attempt {attempt + 1}/{max_retries}")
                         if attempt < max_retries - 1:
                             await asyncio.sleep(base_delay + self.request_delay)
                             continue
+                        # Store in cache even if markers failed
+                        if self.cache:
+                            self.cache.set(text, translated)
                         return translated  # Return anyway on last attempt
                         
                 except Exception as e:
@@ -541,6 +576,8 @@ class Translator:
         self.logger.info(f"  - Table cell segments: {len(checkpoint_data['table_cell_segments'])}")
         self.logger.info(f"  - Chart segments: {len(checkpoint_data['chart_segments'])}")
         self.logger.info(f"  - SmartArt segments: {len(checkpoint_data['smartart_segments'])}")
+        self.logger.info(f"  - Cache hits: {self.cache_hits}")
+        self.logger.info(f"  - API calls: {self.api_calls}")
     
     @timer
     @log_errors

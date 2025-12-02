@@ -69,7 +69,7 @@ class TestInvalidProviderRejection:
         assert "openai" in str(exc_info.value)
         assert "openrouter" in str(exc_info.value)
     
-    @given(provider=st.text().filter(lambda x: x not in ["openai", "openrouter", "groq"]))
+    @given(provider=st.text().filter(lambda x: x not in ["openai", "openrouter", "groq", "gemini"]))
     @settings(max_examples=100)
     def test_invalid_provider_validation_returns_false(self, provider: str):
         """Property: Invalid providers fail validation"""

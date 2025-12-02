@@ -1,6 +1,9 @@
 # TranslateX Configuration
 # Copy this file to config.yaml and fill in your API keys
 
+# =============================================================================
+# PROVIDER SETTINGS
+# =============================================================================
 # Provider: openai, gemini, groq, openrouter
 provider: "gemini"
 
@@ -10,16 +13,70 @@ openrouter_api_key: ""
 groq_api_key: ""
 gemini_api_key: "your-gemini-api-key-here"
 
-# Model Settings
+# =============================================================================
+# MODEL SETTINGS
+# =============================================================================
 # Gemini: gemini-2.0-flash, gemini-2.5-flash, gemini-1.5-flash
 # Groq: llama-3.3-70b-versatile, gemma2-9b-it
 # OpenAI: gpt-4o-mini, gpt-4o
+# OpenRouter: See https://openrouter.ai/models
 model: "gemini-2.0-flash"
 
-# Translation Settings
+# =============================================================================
+# TRANSLATION SETTINGS
+# =============================================================================
 source_lang: "English"
 target_lang: "Vietnamese"
 
-# Performance Settings
+# =============================================================================
+# PERFORMANCE SETTINGS
+# =============================================================================
+# Maximum concurrent API requests (auto-adjusted based on model rate limits)
 max_concurrent: 5
+
+# Maximum characters per chunk (larger = fewer API calls but may hit token limits)
 max_chunk_size: 5000
+
+# =============================================================================
+# ADVANCED FEATURES
+# =============================================================================
+
+# --- Resume/Checkpoint ---
+# Automatically resume from checkpoint if translation was interrupted
+auto_resume: true
+
+# --- Batch Processing ---
+# Allow processing multiple files when a directory is provided
+batch_enabled: true
+
+# --- Translation Cache ---
+# Cache translations to avoid re-translating identical text
+# Saves API costs when translating similar documents
+cache_enabled: true
+
+# --- Context Window ---
+# Number of previous translated segments to include as context
+# Helps maintain coherent translations across paragraphs
+# Set to 0 to disable
+context_window: 2
+
+# --- Review Mode ---
+# Generate an HTML file showing original and translated text side by side
+# Useful for reviewing translation quality
+review_mode: false
+
+# --- Error Handling ---
+# Maximum retry attempts for failed API calls
+max_retries: 3
+
+# --- Logging ---
+# Log level: DEBUG, INFO, WARNING, ERROR
+log_level: "INFO"
+
+# Save logs to file in output directory
+log_to_file: true
+
+# --- Custom Glossary ---
+# Path to glossary YAML file with custom term translations
+# Set to null or remove to use default technical terms only
+glossary_file: "glossary.yaml"
