@@ -8,9 +8,12 @@ import yaml
 from translatex import DocxTranslator
 from translatex.batch import BatchProcessor
 from translatex.docs.translator import DocsTranslator
-from translatex.utils.spinner import Spinner
 from translatex.utils.file_logger import setup_logger, get_logger
-from translatex.utils.config import TranslateXConfig
+from translatex.utils.console import (
+    console, print_banner, print_config, print_success, print_error,
+    print_warning, print_info, print_summary, print_file_result,
+    create_progress, print_docs_header, print_docx_header
+)
 
 
 def load_config(config_path: str) -> dict:
@@ -20,10 +23,10 @@ def load_config(config_path: str) -> dict:
             config = yaml.safe_load(f)
         return config
     except FileNotFoundError:
-        print(f"Config file not found: {config_path}")
+        print_error(f"Config file not found: {config_path}")
         raise
     except yaml.YAMLError as e:
-        print(f"Error parsing YAML config: {e}")
+        print_error(f"Error parsing YAML config: {e}")
         raise
 
 
@@ -42,7 +45,6 @@ def create_translator(config: dict, input_file: str, output_dir: str) -> DocxTra
         target_lang=config.get("target_lang", "Vietnamese"),
         max_chunk_size=config.get("max_chunk_size", 5000),
         max_concurrent=config.get("max_concurrent", 100),
-        # Advanced features
         cache_enabled=config.get("cache_enabled", True),
         context_window=config.get("context_window", 2),
         glossary_file=config.get("glossary_file"),
@@ -55,107 +57,109 @@ def translate_single_file(config: dict, input_file: str, output_dir: str):
     """Translate a single DOCX file"""
     logger = get_logger()
     
-    print("Starting DOCX translation...\n")
+    print_docx_header(input_file, output_dir)
+    print_config(
+        provider=config.get("provider", "openai"),
+        model=config.get("model", "gpt-4o-mini"),
+        source_lang=config.get("source_lang", "English"),
+        target_lang=config.get("target_lang", "Vietnamese"),
+        cache=config.get("cache_enabled", True),
+        context_window=config.get("context_window", 2)
+    )
     
-    spinner = Spinner("Processing DOCX translation")
-    spinner.start()
-    
-    try:
-        translator = create_translator(config, input_file, output_dir)
-        translator.translate()
-        spinner.stop()
+    with create_progress() as progress:
+        task = progress.add_task("Translating DOCX...", total=None)
         
-        output_path = translator.get_output_path()
-        print(f"Translation completed!\nOutput: {output_path}")
-        logger.info(f"Translation completed: {output_path}")
-        
-        # Log summary
-        logger.log_summary({
-            "Input file": input_file,
-            "Output file": output_path,
-            "Provider": config.get("provider", "openai"),
-            "Model": config.get("model", "gpt-4o-mini"),
-        })
-        
-    except Exception as e:
-        spinner.stop()
-        print(f"Translation failed: {e}")
-        logger.error(f"Translation failed: {e}")
-        sys.exit(1)
+        try:
+            translator = create_translator(config, input_file, output_dir)
+            translator.translate()
+            progress.update(task, completed=True)
+            
+            output_path = translator.get_output_path()
+            console.print()
+            print_success(f"Translation completed!")
+            print_info(f"Output: [cyan]{output_path}[/cyan]")
+            
+            logger.log_summary({
+                "Input file": input_file,
+                "Output file": output_path,
+                "Provider": config.get("provider", "openai"),
+                "Model": config.get("model", "gpt-4o-mini"),
+            })
+            
+        except Exception as e:
+            console.print()
+            print_error(f"Translation failed: {e}")
+            logger.error(f"Translation failed: {e}")
+            sys.exit(1)
 
 
 def translate_batch(config: dict, input_dir: str, output_dir: str):
     """Translate multiple DOCX files in a directory"""
     logger = get_logger()
     
-    print(f"Starting batch translation from: {input_dir}\n")
+    processor = BatchProcessor(translator_factory=lambda: None)
     
-    def translator_factory():
-        # Factory will be called with specific file later
-        return None
-    
-    processor = BatchProcessor(translator_factory=translator_factory)
-    
-    # Find all DOCX files
     try:
         files = processor.find_docx_files(input_dir)
     except Exception as e:
-        print(f"Error finding files: {e}")
+        print_error(f"Error finding files: {e}")
         logger.error(f"Batch error: {e}")
         sys.exit(1)
     
     if not files:
-        print("No .docx files found in directory")
-        logger.warning("No .docx files found")
+        print_warning("No .docx files found in directory")
         return
     
-    print(f"Found {len(files)} DOCX files to translate\n")
-    logger.info(f"Batch processing {len(files)} files")
+    print_info(f"Found [cyan]{len(files)}[/cyan] DOCX files to translate")
+    print_config(
+        provider=config.get("provider", "openai"),
+        model=config.get("model", "gpt-4o-mini"),
+        source_lang=config.get("source_lang", "English"),
+        target_lang=config.get("target_lang", "Vietnamese")
+    )
     
-    # Process each file
     results = {}
-    for idx, file_path in enumerate(files):
-        filename = os.path.basename(file_path)
-        print(f"\n[{idx + 1}/{len(files)}] Translating: {filename}")
+    
+    with create_progress() as progress:
+        task = progress.add_task("Translating files...", total=len(files))
         
-        try:
-            translator = create_translator(config, file_path, output_dir)
-            translator.translate()
-            results[file_path] = {"status": "success", "output": translator.get_output_path()}
-            print(f"  Completed: {translator.get_output_path()}")
-        except Exception as e:
-            results[file_path] = {"status": "failed", "error": str(e)}
-            print(f"  Failed: {e}")
-            logger.error(f"Failed to translate {filename}: {e}")
+        for file_path in files:
+            filename = os.path.basename(file_path)
+            progress.update(task, description=f"[cyan]{filename[:40]}[/cyan]")
+            
+            try:
+                translator = create_translator(config, file_path, output_dir)
+                translator.translate()
+                results[file_path] = {"status": "success", "output": translator.get_output_path()}
+            except Exception as e:
+                results[file_path] = {"status": "failed", "error": str(e)}
+                logger.error(f"Failed to translate {filename}: {e}")
+            
+            progress.advance(task)
+    
+    # Print results
+    console.print()
+    for path, result in results.items():
+        filename = os.path.basename(path)
+        print_file_result(filename, result["status"], result.get("output"), result.get("error"))
     
     # Print summary
     success_count = sum(1 for r in results.values() if r["status"] == "success")
     failed_count = sum(1 for r in results.values() if r["status"] == "failed")
     
-    print(f"\n{'='*50}")
-    print(f"BATCH COMPLETE: {success_count} succeeded, {failed_count} failed")
-    print(f"{'='*50}")
-    
-    logger.log_summary({
+    console.print()
+    print_summary("Batch Translation Complete", {
         "Total files": len(files),
-        "Succeeded": success_count,
+        "Translated": success_count,
         "Failed": failed_count,
     })
-    
-    if failed_count > 0:
-        print("\nFailed files:")
-        for path, result in results.items():
-            if result["status"] == "failed":
-                print(f"  - {os.path.basename(path)}: {result['error']}")
 
 
 def translate_docs(config: dict, source_dir: str, output_dir: str, force: bool = False):
     """Translate documentation directory (Markdown/MDX files)"""
     logger = get_logger()
     
-    print(f"Starting docs translation: {source_dir} -> {output_dir}\n")
-    
-    # Get API key
     provider = config.get("provider", "openai")
     key_map = {
         "openai": "openai_api_key",
@@ -164,6 +168,15 @@ def translate_docs(config: dict, source_dir: str, output_dir: str, force: bool =
         "gemini": "gemini_api_key",
     }
     api_key = config.get(key_map.get(provider, "openai_api_key"), "")
+    
+    print_config(
+        provider=provider,
+        model=config.get("model", "gpt-4o-mini"),
+        source_lang=config.get("source_lang", "English"),
+        target_lang=config.get("target_lang", "Vietnamese"),
+        cache=config.get("cache_enabled", True),
+        force_retranslate=force
+    )
     
     try:
         translator = DocsTranslator(
@@ -176,20 +189,79 @@ def translate_docs(config: dict, source_dir: str, output_dir: str, force: bool =
             glossary_file=config.get("glossary_file"),
         )
         
-        stats = translator.translate_directory(source_dir, output_dir, force=force)
+        # Custom progress callback
+        from translatex.docs.scanner import DocsScanner
+        scanner = DocsScanner(source_dir, output_dir)
+        files = scanner.scan()
         
-        print(f"\nDocs translation completed!")
-        print(f"  Translated: {stats['files_translated']}")
-        print(f"  Cached: {stats['files_cached']}")
-        print(f"  Failed: {stats['files_failed']}")
+        if not files:
+            print_warning("No documentation files found")
+            return
+        
+        scanner.ensure_output_structure()
+        asset_count = scanner.copy_assets()
+        
+        print_docs_header(source_dir, output_dir, len(files), asset_count)
+        
+        # Translate with rich progress
+        stats = {"files_translated": 0, "files_cached": 0, "files_failed": 0}
+        
+        with create_progress() as progress:
+            task = progress.add_task("Translating docs...", total=len(files))
+            
+            from translatex.docs.manifest import ManifestManager
+            from pathlib import Path
+            
+            manifest_path = Path(output_dir) / ".translatex_manifest.json"
+            manifest = ManifestManager(str(manifest_path))
+            if not force:
+                manifest.load()
+            manifest.set_directories(source_dir, output_dir)
+            
+            for doc_file in files:
+                filename = Path(doc_file.source_path).name
+                progress.update(task, description=f"[cyan]{filename[:40]}[/cyan]")
+                
+                # Check if file needs translation
+                if not force and not manifest.is_changed(doc_file.relative_path, doc_file.source_path):
+                    stats["files_cached"] += 1
+                    progress.advance(task)
+                    continue
+                
+                try:
+                    result = translator.translate_file(doc_file.source_path, doc_file.output_path)
+                    if result:
+                        manifest.update(doc_file.relative_path, doc_file.source_hash, doc_file.output_path)
+                        stats["files_translated"] += 1
+                    else:
+                        stats["files_failed"] += 1
+                except Exception as e:
+                    stats["files_failed"] += 1
+                    logger.error(f"Failed: {doc_file.relative_path}: {e}")
+                
+                progress.advance(task)
+            
+            manifest.save()
+        
+        console.print()
+        print_success("Documentation translation completed!")
+        print_summary("Translation Summary", {
+            "Files translated": stats["files_translated"],
+            "Files cached (unchanged)": stats["files_cached"],
+            "Files failed": stats["files_failed"],
+            "API calls": translator.stats.get("api_calls", 0),
+            "Cache hits": translator.stats.get("cache_hits", 0),
+        })
         
     except Exception as e:
-        print(f"Docs translation failed: {e}")
+        print_error(f"Docs translation failed: {e}")
         logger.error(f"Docs translation failed: {e}")
         sys.exit(1)
 
 
 def main():
+    print_banner()
+    
     config = load_config("config.yaml")
     
     parser = argparse.ArgumentParser(
@@ -222,13 +294,11 @@ Examples:
     
     api_key = config.get(key_map.get(provider, "openai_api_key"), "")
     if not api_key:
-        print(f"API key not found for provider '{provider}'. Please set '{key_map[provider]}' in config.yaml.")
+        print_error(f"API key not found for provider '{provider}'. Please set '{key_map[provider]}' in config.yaml.")
         sys.exit(1)
     
-    # Ensure output directory exists
     os.makedirs(output_dir, exist_ok=True)
     
-    # Setup logging
     setup_logger(
         level=config.get("log_level", "INFO"),
         log_to_file=config.get("log_to_file", True),
@@ -238,7 +308,7 @@ Examples:
     # Handle docs translation mode
     if args.docs:
         if not os.path.isdir(args.docs):
-            print(f"Docs directory not found: {args.docs}")
+            print_error(f"Docs directory not found: {args.docs}")
             sys.exit(1)
         translate_docs(config, args.docs, output_dir, force=args.force)
         return
@@ -249,21 +319,18 @@ Examples:
         parser.print_help()
         sys.exit(1)
     
-    # Check if input is file or directory
     if os.path.isdir(input_path):
-        # Batch processing
         if not config.get("batch_enabled", True):
-            print("Batch processing is disabled in config. Set 'batch_enabled: true' to enable.")
+            print_error("Batch processing is disabled. Set 'batch_enabled: true' in config.")
             sys.exit(1)
         translate_batch(config, input_path, output_dir)
     elif os.path.isfile(input_path):
-        # Single file
         if not input_path.lower().endswith('.docx'):
-            print("Input file must be a .docx file")
+            print_error("Input file must be a .docx file")
             sys.exit(1)
         translate_single_file(config, input_path, output_dir)
     else:
-        print(f"Input not found: {input_path}")
+        print_error(f"Input not found: {input_path}")
         sys.exit(1)
 
 
