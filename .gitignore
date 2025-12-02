@@ -1,0 +1,32 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Output and test files
+test/
+output/
+*.docx
+
+# Config with API keys (use config.example.yaml as template)
+config.yaml
+
+# Hypothesis test cache
+.hypothesis/
+
+# Kiro specs (development only)
+.kiro/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
