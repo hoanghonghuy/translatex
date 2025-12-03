@@ -1,8 +1,9 @@
 """
 LLM Client Factory for WordFlux
-Supports multiple providers: OpenAI, OpenRouter, Groq, and Gemini
+Supports multiple providers: OpenAI, OpenRouter, Groq, Gemini, Ollama
 """
 from openai import AsyncOpenAI
+from typing import Union
 import logging
 
 logger = logging.getLogger(__name__)
@@ -27,6 +28,18 @@ class LLMClientFactory:
         "gemini": {
             "base_url": "https://generativelanguage.googleapis.com/v1beta/openai/",
             "key_field": "gemini_api_key"
+        },
+        "ollama": {
+            "base_url": "http://localhost:11434/v1",
+            "key_field": None  # Ollama local không cần API key
+        },
+        "ollama-cloud": {
+            "base_url": "https://ollama.com/api",
+            "key_field": "ollama_api_key"  # Ollama Cloud cần API key
+        },
+        "deepseek": {
+            "base_url": "https://api.deepseek.com/v1",
+            "key_field": "deepseek_api_key"
         }
     }
     
@@ -63,6 +76,37 @@ class LLMClientFactory:
         "gemini-1.5-pro",
     ]
     
+    # Ollama local models (free, no rate limits)
+    OLLAMA_MODELS = [
+        "qwen3:8b",
+        "qwen3:4b",
+        "qwen3:1.7b",
+        "qwen2.5:7b",
+        "qwen2.5:3b",
+        "llama3.2:3b",
+        "llama3.1:8b",
+        "gemma2:9b",
+        "mistral:7b",
+        "phi3:mini",
+    ]
+    
+    # Ollama Cloud models (requires API key, pay-per-use)
+    OLLAMA_CLOUD_MODELS = [
+        "qwen3:235b-cloud",
+        "qwen3-vl:235b-cloud",
+        "qwen3-coder:480b-cloud",
+        "llama4:maverick-cloud",
+        "llama4:scout-cloud",
+        "deepseek-r1:671b-cloud",
+        "gemma3:27b-cloud",
+    ]
+    
+    # DeepSeek models (paid, very affordable)
+    DEEPSEEK_MODELS = [
+        "deepseek-chat",        # DeepSeek-V3 - general chat/translation
+        "deepseek-reasoner",    # DeepSeek-R1 - reasoning/complex tasks
+    ]
+    
     # Rate limits per model (RPM = requests per minute)
     # Used to calculate optimal delay between requests
     MODEL_RATE_LIMITS = {
@@ -85,6 +129,24 @@ class LLMClientFactory:
         "gpt-4o-mini": {"rpm": 500, "recommended_concurrent": 50, "delay": 0},
         "gpt-4o": {"rpm": 500, "recommended_concurrent": 50, "delay": 0},
         "gpt-4": {"rpm": 200, "recommended_concurrent": 20, "delay": 0},
+        # Ollama local models (no rate limits, depends on hardware)
+        "qwen3:8b": {"rpm": 60, "recommended_concurrent": 2, "delay": 1},
+        "qwen3:4b": {"rpm": 60, "recommended_concurrent": 3, "delay": 1},
+        "qwen2.5:7b": {"rpm": 60, "recommended_concurrent": 2, "delay": 1},
+        "llama3.1:8b": {"rpm": 60, "recommended_concurrent": 2, "delay": 1},
+        "gemma2:9b": {"rpm": 60, "recommended_concurrent": 2, "delay": 1},
+        "mistral:7b": {"rpm": 60, "recommended_concurrent": 2, "delay": 1},
+        # Ollama Cloud models (API rate limits)
+        "qwen3:235b-cloud": {"rpm": 30, "recommended_concurrent": 5, "delay": 2},
+        "qwen3-vl:235b-cloud": {"rpm": 30, "recommended_concurrent": 5, "delay": 2},
+        "qwen3-coder:480b-cloud": {"rpm": 30, "recommended_concurrent": 5, "delay": 2},
+        "llama4:maverick-cloud": {"rpm": 30, "recommended_concurrent": 5, "delay": 2},
+        "llama4:scout-cloud": {"rpm": 30, "recommended_concurrent": 5, "delay": 2},
+        "deepseek-r1:671b-cloud": {"rpm": 20, "recommended_concurrent": 3, "delay": 3},
+        "gemma3:27b-cloud": {"rpm": 30, "recommended_concurrent": 5, "delay": 2},
+        # DeepSeek models (high limits, affordable)
+        "deepseek-chat": {"rpm": 60, "recommended_concurrent": 10, "delay": 1},
+        "deepseek-reasoner": {"rpm": 30, "recommended_concurrent": 5, "delay": 2},
     }
     
     @staticmethod
@@ -117,16 +179,16 @@ class LLMClientFactory:
         return {"rpm": 10, "recommended_concurrent": 2, "delay": 6, "sequential": False}
     
     @staticmethod
-    def create_client(provider: str, api_key: str) -> AsyncOpenAI:
+    def create_client(provider: str, api_key: str) -> Union[AsyncOpenAI, "OllamaCloudClient"]:
         """
-        Create AsyncOpenAI client for the specified provider.
+        Create LLM client for the specified provider.
         
         Args:
-            provider: Provider name ("openai" or "openrouter")
+            provider: Provider name ("openai", "openrouter", "groq", "gemini", "ollama", "ollama-cloud")
             api_key: API key for the provider
             
         Returns:
-            AsyncOpenAI client configured for the provider
+            AsyncOpenAI client or OllamaCloudClient configured for the provider
             
         Raises:
             ValueError: If provider is not supported or api_key is missing
@@ -135,11 +197,24 @@ class LLMClientFactory:
             supported = ", ".join(LLMClientFactory.PROVIDERS.keys())
             raise ValueError(f"Invalid provider '{provider}'. Supported: {supported}")
         
+        provider_config = LLMClientFactory.PROVIDERS[provider]
+        key_field = provider_config["key_field"]
+        
+        # Ollama Cloud uses custom client (different API format)
+        if provider == "ollama-cloud":
+            if not api_key:
+                raise ValueError(f"API key required for provider '{provider}'. Set '{key_field}' in config.")
+            from translatex.utils.ollama_cloud_client import OllamaCloudClient
+            return OllamaCloudClient(api_key=api_key)
+        
+        # Ollama local không cần API key
+        if key_field is None:
+            base_url = provider_config["base_url"]
+            return AsyncOpenAI(api_key="ollama", base_url=base_url)
+        
         if not api_key:
-            key_field = LLMClientFactory.get_api_key_field(provider)
             raise ValueError(f"API key required for provider '{provider}'. Set '{key_field}' in config.")
         
-        provider_config = LLMClientFactory.PROVIDERS[provider]
         base_url = provider_config["base_url"]
         
         if base_url:
@@ -180,6 +255,11 @@ class LLMClientFactory:
         # Gemini models are free (with rate limits)
         if model in LLMClientFactory.GEMINI_MODELS:
             return True
+        # Ollama local models are free
+        if model in LLMClientFactory.OLLAMA_MODELS:
+            return True
+        # Ollama Cloud models are NOT free (pay-per-use)
+        # Don't include OLLAMA_CLOUD_MODELS here
         return False
     
     @staticmethod

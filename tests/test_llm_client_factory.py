@@ -69,7 +69,7 @@ class TestInvalidProviderRejection:
         assert "openai" in str(exc_info.value)
         assert "openrouter" in str(exc_info.value)
     
-    @given(provider=st.text().filter(lambda x: x not in ["openai", "openrouter", "groq", "gemini"]))
+    @given(provider=st.text().filter(lambda x: x not in ["openai", "openrouter", "groq", "gemini", "ollama", "ollama-cloud"]))
     @settings(max_examples=100)
     def test_invalid_provider_validation_returns_false(self, provider: str):
         """Property: Invalid providers fail validation"""
@@ -138,6 +138,127 @@ class TestFreeModelDetection:
         """Gemini models should be detected as free"""
         for model in LLMClientFactory.GEMINI_MODELS:
             assert LLMClientFactory.is_free_model(model) is True
+    
+    def test_ollama_models_are_free(self):
+        """Ollama models should be detected as free"""
+        for model in LLMClientFactory.OLLAMA_MODELS:
+            assert LLMClientFactory.is_free_model(model) is True
+
+
+class TestOllamaProvider:
+    """Test Ollama provider integration"""
+    
+    def test_ollama_provider_exists(self):
+        """Ollama should be a valid provider"""
+        assert LLMClientFactory.validate_provider("ollama") is True
+    
+    def test_ollama_uses_correct_endpoint(self):
+        """Ollama provider should use localhost endpoint"""
+        assert LLMClientFactory.get_base_url("ollama") == "http://localhost:11434/v1"
+    
+    def test_ollama_no_api_key_required(self):
+        """Ollama should not require API key"""
+        # Should not raise error even with empty API key
+        client = LLMClientFactory.create_client("ollama", "")
+        assert client is not None
+        assert str(client.base_url).rstrip('/') == "http://localhost:11434/v1"
+    
+    def test_ollama_api_key_field_is_none(self):
+        """Ollama should have None as key_field"""
+        assert LLMClientFactory.PROVIDERS["ollama"]["key_field"] is None
+    
+    def test_ollama_models_in_list(self):
+        """Ollama models list should contain expected models"""
+        expected_models = ["qwen3:8b", "qwen3:4b", "llama3.1:8b", "gemma2:9b", "mistral:7b"]
+        for model in expected_models:
+            assert model in LLMClientFactory.OLLAMA_MODELS
+    
+    def test_ollama_rate_limits_configured(self):
+        """Ollama models should have rate limit config"""
+        config = LLMClientFactory.get_rate_limit_config("qwen3:8b")
+        assert config["rpm"] == 60
+        assert config["recommended_concurrent"] == 2
+
+
+class TestOllamaCloudProvider:
+    """Test Ollama Cloud provider integration"""
+    
+    def test_ollama_cloud_provider_exists(self):
+        """Ollama Cloud should be a valid provider"""
+        assert LLMClientFactory.validate_provider("ollama-cloud") is True
+    
+    def test_ollama_cloud_uses_correct_endpoint(self):
+        """Ollama Cloud provider should use ollama.com/api endpoint"""
+        assert LLMClientFactory.get_base_url("ollama-cloud") == "https://ollama.com/api"
+    
+    def test_ollama_cloud_requires_api_key(self):
+        """Ollama Cloud should require API key"""
+        assert LLMClientFactory.PROVIDERS["ollama-cloud"]["key_field"] == "ollama_api_key"
+        
+        # Should raise error without API key
+        with pytest.raises(ValueError):
+            LLMClientFactory.create_client("ollama-cloud", "")
+    
+    def test_ollama_cloud_creates_client_with_key(self):
+        """Ollama Cloud should create client with valid API key"""
+        from translatex.utils.ollama_cloud_client import OllamaCloudClient
+        client = LLMClientFactory.create_client("ollama-cloud", "test-api-key")
+        assert client is not None
+        assert isinstance(client, OllamaCloudClient)
+        assert client.api_key == "test-api-key"
+    
+    def test_ollama_cloud_models_in_list(self):
+        """Ollama Cloud models list should contain expected models"""
+        expected_models = ["qwen3:235b-cloud", "qwen3-vl:235b-cloud", "qwen3-coder:480b-cloud"]
+        for model in expected_models:
+            assert model in LLMClientFactory.OLLAMA_CLOUD_MODELS
+    
+    def test_ollama_cloud_models_not_free(self):
+        """Ollama Cloud models should NOT be detected as free"""
+        for model in LLMClientFactory.OLLAMA_CLOUD_MODELS:
+            assert LLMClientFactory.is_free_model(model) is False
+    
+    def test_ollama_cloud_rate_limits_configured(self):
+        """Ollama Cloud models should have rate limit config"""
+        config = LLMClientFactory.get_rate_limit_config("qwen3:235b-cloud")
+        assert config["rpm"] == 30
+        assert config["recommended_concurrent"] == 5
+
+
+class TestDeepSeekProvider:
+    """Test DeepSeek provider integration"""
+    
+    def test_deepseek_provider_exists(self):
+        """DeepSeek should be a valid provider"""
+        assert LLMClientFactory.validate_provider("deepseek") is True
+    
+    def test_deepseek_uses_correct_endpoint(self):
+        """DeepSeek provider should use api.deepseek.com endpoint"""
+        assert LLMClientFactory.get_base_url("deepseek") == "https://api.deepseek.com/v1"
+    
+    def test_deepseek_requires_api_key(self):
+        """DeepSeek should require API key"""
+        assert LLMClientFactory.PROVIDERS["deepseek"]["key_field"] == "deepseek_api_key"
+        
+        with pytest.raises(ValueError):
+            LLMClientFactory.create_client("deepseek", "")
+    
+    def test_deepseek_creates_client_with_key(self):
+        """DeepSeek should create client with valid API key"""
+        client = LLMClientFactory.create_client("deepseek", "test-api-key")
+        assert client is not None
+        assert str(client.base_url).rstrip('/') == "https://api.deepseek.com/v1"
+    
+    def test_deepseek_models_in_list(self):
+        """DeepSeek models list should contain expected models"""
+        assert "deepseek-chat" in LLMClientFactory.DEEPSEEK_MODELS
+        assert "deepseek-reasoner" in LLMClientFactory.DEEPSEEK_MODELS
+    
+    def test_deepseek_rate_limits_configured(self):
+        """DeepSeek models should have rate limit config"""
+        config = LLMClientFactory.get_rate_limit_config("deepseek-chat")
+        assert config["rpm"] == 60
+        assert config["recommended_concurrent"] == 10
 
 
 class TestAPIKeyValidation:

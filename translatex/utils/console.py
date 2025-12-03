@@ -15,31 +15,17 @@ console = Console()
 
 
 def print_banner():
-    """Print TranslateX banner."""
-    banner = """
-╔════════════════════════════════════════════════════════════╗
-║                      TranslateX                            ║
-║         AI-powered Document Translation Tool               ║
-╚════════════════════════════════════════════════════════════╝
-    """
-    console.print(banner, style="bold cyan")
+    """Print TranslateX banner - minimal version."""
+    console.print("[bold cyan]TranslateX[/bold cyan] - AI Document Translation", style="dim")
 
 
 def print_config(provider: str, model: str, source_lang: str, target_lang: str, **kwargs):
-    """Print configuration info."""
-    table = Table(show_header=False, box=box.ROUNDED, border_style="dim")
-    table.add_column("Key", style="cyan")
-    table.add_column("Value", style="green")
+    """Print configuration info - single line format."""
+    from translatex.utils.llm_client_factory import LLMClientFactory
+    is_free = LLMClientFactory.is_free_model(model)
+    free_tag = " [green](FREE)[/green]" if is_free else ""
     
-    table.add_row("Provider", provider)
-    table.add_row("Model", model)
-    table.add_row("Languages", f"{source_lang} → {target_lang}")
-    
-    for key, value in kwargs.items():
-        if value is not None:
-            table.add_row(key.replace("_", " ").title(), str(value))
-    
-    console.print(Panel(table, title="[bold]Configuration[/bold]", border_style="blue"))
+    console.print(f"[cyan]⚙[/cyan] {provider}/{model}{free_tag} | {source_lang} → {target_lang}")
 
 
 def print_success(message: str):
@@ -63,25 +49,18 @@ def print_info(message: str):
 
 
 def print_summary(title: str, stats: dict):
-    """Print summary table."""
-    table = Table(title=title, box=box.ROUNDED, border_style="green")
-    table.add_column("Metric", style="cyan")
-    table.add_column("Value", style="white", justify="right")
-    
+    """Print summary - compact single line."""
+    parts = []
     for key, value in stats.items():
-        # Color code based on key
-        if "failed" in key.lower():
-            value_style = "red" if value > 0 else "green"
-        elif "success" in key.lower() or "translated" in key.lower():
-            value_style = "green"
-        elif "cached" in key.lower():
-            value_style = "yellow"
-        else:
-            value_style = "white"
-        
-        table.add_row(key, f"[{value_style}]{value}[/{value_style}]")
+        if value > 0 or "translated" in key.lower() or "total" in key.lower():
+            if "failed" in key.lower() and value > 0:
+                parts.append(f"[red]{key}: {value}[/red]")
+            elif "cached" in key.lower():
+                parts.append(f"[yellow]{key}: {value}[/yellow]")
+            else:
+                parts.append(f"{key}: {value}")
     
-    console.print(table)
+    console.print(f"[dim]{' | '.join(parts)}[/dim]")
 
 
 def print_file_result(filename: str, status: str, output: str = None, error: str = None):
@@ -113,26 +92,12 @@ def create_progress() -> Progress:
 
 
 def print_docs_header(source_dir: str, output_dir: str, file_count: int, asset_count: int = 0):
-    """Print docs translation header."""
-    console.print()
-    console.print(Panel(
-        f"[cyan]Source:[/cyan] {source_dir}\n"
-        f"[cyan]Output:[/cyan] {output_dir}\n"
-        f"[cyan]Files:[/cyan] {file_count} documentation files\n"
-        f"[cyan]Assets:[/cyan] {asset_count} files copied",
-        title="[bold]Documentation Translation[/bold]",
-        border_style="blue"
-    ))
-    console.print()
+    """Print docs translation header - compact."""
+    console.print(f"[cyan]📁[/cyan] {source_dir} → {output_dir} ({file_count} files, {asset_count} assets)")
 
 
 def print_docx_header(input_file: str, output_dir: str):
-    """Print DOCX translation header."""
-    console.print()
-    console.print(Panel(
-        f"[cyan]Input:[/cyan] {input_file}\n"
-        f"[cyan]Output:[/cyan] {output_dir}",
-        title="[bold]DOCX Translation[/bold]",
-        border_style="blue"
-    ))
-    console.print()
+    """Print DOCX translation header - compact."""
+    import os
+    filename = os.path.basename(input_file)
+    console.print(f"[cyan]📄[/cyan] {filename} → {output_dir}/")

@@ -75,7 +75,7 @@ class GlossaryLoader:
             # Merge custom terms (override defaults)
             custom_terms = data.get("terms", {})
             self.terms.update(custom_terms)
-            logger.info(f"Loaded {len(custom_terms)} custom terms from glossary")
+            logger.debug(f"Loaded {len(custom_terms)} custom terms from glossary")
         except yaml.YAMLError as e:
             logger.warning(f"Invalid glossary YAML: {e}, using default terms")
         except IOError as e:

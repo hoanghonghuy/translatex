@@ -4,7 +4,7 @@
 # =============================================================================
 # PROVIDER SETTINGS
 # =============================================================================
-# Provider: openai, gemini, groq, openrouter
+# Provider: openai, gemini, groq, openrouter, ollama, ollama-cloud, deepseek
 provider: "gemini"
 
 # API Keys (fill in the one you're using)
@@ -12,6 +12,13 @@ openai_api_key: ""
 openrouter_api_key: ""
 groq_api_key: ""
 gemini_api_key: "your-gemini-api-key-here"
+ollama_api_key: ""      # For Ollama Cloud only
+deepseek_api_key: ""    # For DeepSeek (https://platform.deepseek.com)
+
+# Provider notes:
+# - ollama: Local, no API key needed, run `ollama serve` first
+# - ollama-cloud: Requires ollama_api_key from https://ollama.com/settings/keys
+# - deepseek: Requires deepseek_api_key from https://platform.deepseek.com
 
 # =============================================================================
 # MODEL SETTINGS
@@ -20,6 +27,9 @@ gemini_api_key: "your-gemini-api-key-here"
 # Groq: llama-3.3-70b-versatile, gemma2-9b-it
 # OpenAI: gpt-4o-mini, gpt-4o
 # OpenRouter: See https://openrouter.ai/models
+# Ollama Local: qwen3:8b, qwen3:4b, llama3.1:8b, gemma2:9b, mistral:7b
+# Ollama Cloud: qwen3:235b-cloud, qwen3-vl:235b-cloud, qwen3-coder:480b-cloud
+# DeepSeek: deepseek-chat (V3), deepseek-reasoner (R1 - reasoning)
 model: "gemini-2.0-flash"
 
 # =============================================================================

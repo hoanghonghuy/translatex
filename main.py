@@ -39,6 +39,8 @@ def create_translator(config: dict, input_file: str, output_dir: str) -> DocxTra
         openrouter_api_key=config.get("openrouter_api_key", ""),
         groq_api_key=config.get("groq_api_key", ""),
         gemini_api_key=config.get("gemini_api_key", ""),
+        ollama_api_key=config.get("ollama_api_key", ""),
+        deepseek_api_key=config.get("deepseek_api_key", ""),
         provider=config.get("provider", "openai"),
         model=config.get("model", "gpt-4o-mini"),
         source_lang=config.get("source_lang", "English"),
@@ -67,31 +69,26 @@ def translate_single_file(config: dict, input_file: str, output_dir: str):
         context_window=config.get("context_window", 2)
     )
     
-    with create_progress() as progress:
-        task = progress.add_task("Translating DOCX...", total=None)
+    try:
+        translator = create_translator(config, input_file, output_dir)
+        translator.translate()
         
-        try:
-            translator = create_translator(config, input_file, output_dir)
-            translator.translate()
-            progress.update(task, completed=True)
+        output_path = translator.get_output_path()
+        console.print()
+        print_success(f"Done! → [cyan]{output_path}[/cyan]")
             
-            output_path = translator.get_output_path()
-            console.print()
-            print_success(f"Translation completed!")
-            print_info(f"Output: [cyan]{output_path}[/cyan]")
-            
-            logger.log_summary({
-                "Input file": input_file,
-                "Output file": output_path,
-                "Provider": config.get("provider", "openai"),
-                "Model": config.get("model", "gpt-4o-mini"),
-            })
-            
-        except Exception as e:
-            console.print()
-            print_error(f"Translation failed: {e}")
-            logger.error(f"Translation failed: {e}")
-            sys.exit(1)
+        logger.log_summary({
+            "Input file": input_file,
+            "Output file": output_path,
+            "Provider": config.get("provider", "openai"),
+            "Model": config.get("model", "gpt-4o-mini"),
+        })
+        
+    except Exception as e:
+        console.print()
+        print_error(f"Translation failed: {e}")
+        logger.error(f"Translation failed: {e}")
+        sys.exit(1)
 
 
 def translate_batch(config: dict, input_dir: str, output_dir: str):
@@ -166,8 +163,16 @@ def translate_docs(config: dict, source_dir: str, output_dir: str, force: bool =
         "openrouter": "openrouter_api_key",
         "groq": "groq_api_key",
         "gemini": "gemini_api_key",
+        "ollama": None,
+        "ollama-cloud": "ollama_api_key",
+        "deepseek": "deepseek_api_key",
     }
-    api_key = config.get(key_map.get(provider, "openai_api_key"), "")
+    # Ollama local doesn't need API key
+    if provider == "ollama":
+        api_key = ""
+    else:
+        key_field = key_map.get(provider, "openai_api_key")
+        api_key = config.get(key_field, "") if key_field else ""
     
     print_config(
         provider=provider,
@@ -283,19 +288,25 @@ Examples:
     
     output_dir = args.output_dir
     
-    # Validate provider API key
+    # Validate provider API key (Ollama local doesn't need API key)
     provider = config.get("provider", "openai")
     key_map = {
         "openai": "openai_api_key",
         "openrouter": "openrouter_api_key",
         "groq": "groq_api_key",
         "gemini": "gemini_api_key",
+        "ollama": None,  # Ollama local doesn't need API key
+        "ollama-cloud": "ollama_api_key",
+        "deepseek": "deepseek_api_key",
     }
     
-    api_key = config.get(key_map.get(provider, "openai_api_key"), "")
-    if not api_key:
-        print_error(f"API key not found for provider '{provider}'. Please set '{key_map[provider]}' in config.yaml.")
-        sys.exit(1)
+    if provider != "ollama":
+        key_field = key_map.get(provider)
+        if key_field:
+            api_key = config.get(key_field, "")
+            if not api_key:
+                print_error(f"API key not found for provider '{provider}'. Please set '{key_field}' in config.yaml.")
+                sys.exit(1)
     
     os.makedirs(output_dir, exist_ok=True)
     

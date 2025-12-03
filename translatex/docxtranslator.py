@@ -41,6 +41,8 @@ class DocxTranslator:
         openrouter_api_key: str = "",
         groq_api_key: str = "",
         gemini_api_key: str = "",
+        ollama_api_key: str = "",  # For Ollama Cloud
+        deepseek_api_key: str = "",  # For DeepSeek
         provider: str = "openai",
         model: str = "gpt-4o-mini",
         source_lang: str = "English",
@@ -64,7 +66,9 @@ class DocxTranslator:
             openrouter_api_key: API key for OpenRouter
             groq_api_key: API key for Groq
             gemini_api_key: API key for Gemini
-            provider: Provider name ("openai", "openrouter", "groq", or "gemini")
+            ollama_api_key: API key for Ollama Cloud
+            deepseek_api_key: API key for DeepSeek
+            provider: Provider name ("openai", "openrouter", "groq", "gemini", "ollama", "ollama-cloud", or "deepseek")
             model: Model name
             source_lang: Source language
             target_lang: Target language
@@ -101,7 +105,7 @@ class DocxTranslator:
         
         # Select correct API key based on provider
         self.api_key = self._get_api_key(
-            provider, openai_api_key, openrouter_api_key, groq_api_key, gemini_api_key
+            provider, openai_api_key, openrouter_api_key, groq_api_key, gemini_api_key, ollama_api_key, deepseek_api_key
         )
 
         # Ensure output directory exists
@@ -135,17 +139,23 @@ class DocxTranslator:
         self.injector = Injector(self.input_file, self.checkpoint_file, self.output_file)
     
     def _get_api_key(self, provider: str, openai_key: str, openrouter_key: str, 
-                     groq_key: str, gemini_key: str) -> str:
+                     groq_key: str, gemini_key: str, ollama_key: str = "", deepseek_key: str = "") -> str:
         """Get API key for the specified provider."""
+        # Ollama local doesn't need API key
+        if provider == "ollama":
+            return ""
+        
         key_map = {
             "openai": openai_key,
             "openrouter": openrouter_key,
             "groq": groq_key,
             "gemini": gemini_key,
+            "ollama-cloud": ollama_key,
+            "deepseek": deepseek_key,
         }
         api_key = key_map.get(provider, openai_key)
         if not api_key:
-            raise ValueError(f"{provider.title()} API key not found. Please provide '{provider}_api_key'.")
+            raise ValueError(f"{provider.title()} API key not found. Please provide '{provider.replace('-', '_')}_api_key'.")
         return api_key
     
     def _init_advanced_features(self):
@@ -155,17 +165,11 @@ class DocxTranslator:
             cache_file=self.cache_file,
             enabled=self.cache_enabled
         )
-        if self.cache_enabled:
-            self.logger.info(f"Cache enabled: {self.cache.size()} entries loaded")
-        
         # Context window
         self.context = ContextWindow(window_size=self.context_window_size)
-        if self.context_window_size > 0:
-            self.logger.info(f"Context window: {self.context_window_size} segments")
         
         # Glossary
         self.glossary = GlossaryLoader(glossary_file=self.glossary_file)
-        self.logger.info(f"Glossary: {self.glossary.size()} terms loaded")
         
         # Checkpoint manager
         self.checkpoint_manager = CheckpointManager(self.checkpoint_file)
@@ -179,12 +183,9 @@ class DocxTranslator:
         Returns:
             Path to output file
         """
-        # Check for existing checkpoint
+        # Check for existing checkpoint (silent resume)
         if self.auto_resume and self.checkpoint_manager.exists():
-            progress = self.checkpoint_manager.get_progress()
-            if progress:
-                print(f"Found checkpoint: {progress['completed']}/{progress['total']} segments completed")
-                self.logger.info(f"Resuming from checkpoint: {progress['completed']}/{progress['total']}")
+            pass  # Resume silently
         
         # Extract segments
         self.extract()

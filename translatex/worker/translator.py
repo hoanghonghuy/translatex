@@ -96,20 +96,9 @@ class Translator:
         self._log_provider_info(rate_config)
     
     def _log_provider_info(self, rate_config: dict = None):
-        """Log thông tin provider và model đang sử dụng"""
-        is_free = LLMClientFactory.is_free_model(self.model)
-        free_indicator = " (FREE)" if is_free else ""
-        
-        print(f"🔌 Provider: {self.provider}")
-        print(f"🤖 Model: {self.model}{free_indicator}")
-        print(f"🌐 {self.source_lang} → {self.target_lang}")
-        
-        if rate_config:
-            mode = "sequential" if self.sequential_mode else "parallel"
-            print(f"⚡ Rate limit: {rate_config['rpm']} RPM, concurrent: {self.max_concurrent}, delay: {self.request_delay}s, mode: {mode}")
-        
-        self.logger.info(f"Using provider: {self.provider}")
-        self.logger.info(f"Using model: {self.model}{free_indicator}")
+        """Log thông tin provider và model đang sử dụng - minimal output"""
+        # Không print gì ở đây, để main.py xử lý hiển thị config
+        pass
     
     async def _translate_text(self, text: str, context: str = "general", max_retries: int = 3) -> str:
         """Dịch một đoạn text với retry mechanism và exponential backoff"""
@@ -164,9 +153,8 @@ class Translator:
                     
                     # Check if rate limit error
                     if "429" in error_str or "rate" in error_str.lower() or "resource" in error_str.lower():
-                        # Use longer delay for rate limits
+                        # Use longer delay for rate limits (silent retry)
                         delay = max(base_delay * (2 ** attempt), self.request_delay * 2)
-                        self.logger.warning(f"Rate limit hit, waiting {delay}s before retry {attempt + 1}/{max_retries}")
                         await asyncio.sleep(delay)
                         continue
                     

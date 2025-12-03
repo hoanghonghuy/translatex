@@ -38,9 +38,10 @@ class FileLogger:
         
         formatter = logging.Formatter(self.LOG_FORMAT, self.DATE_FORMAT)
         
-        # Console handler
+        # Console handler - only for WARNING and above to keep CLI clean
         console_handler = logging.StreamHandler(sys.stdout)
         console_handler.setFormatter(formatter)
+        console_handler.setLevel(logging.WARNING)
         self.logger.addHandler(console_handler)
         
         # File handler
@@ -70,13 +71,12 @@ class FileLogger:
         self._setup_done = False
     
     def log_summary(self, stats: dict):
-        """Log translation summary statistics."""
-        self.logger.info("=" * 50)
-        self.logger.info("TRANSLATION SUMMARY")
-        self.logger.info("=" * 50)
-        for key, value in stats.items():
-            self.logger.info(f"{key}: {value}")
-        self.logger.info("=" * 50)
+        """Log translation summary statistics - file only, no console."""
+        # Only log to file, not console (to keep CLI clean)
+        if self._file_handler:
+            for key, value in stats.items():
+                self._file_handler.stream.write(f"{key}: {value}\n")
+            self._file_handler.flush()
     
     def debug(self, msg: str):
         self.logger.debug(msg)
